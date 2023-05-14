@@ -1,0 +1,265 @@
+---
+title: "Viewshed-R-ams"
+output: html_document
+date: "2023-05-13"
+---
+
+
+```{r}
+# install packages
+# remotes::install_git("https://github.com/STBrinkmann/GVI")
+# install.packages("devtools")
+# devtools::install_github("STBrinkmann/GVI")
+# install.packages("terra")
+# install.packages('rasterVis')
+```
+```{r}
+# load libraries
+library(terra)
+library(sf)
+library(sfheaders)
+library(GVI)
+library(raster)
+library(tidyverse)
+library(rasterVis)
+library(ggplot2)
+library(dplyr)
+
+suppressPackageStartupMessages(library(terra))
+suppressPackageStartupMessages(library(sf))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(rasterVis))
+
+```
+
+
+# Data processing
+
+```{r}
+# load files
+DEM_tmp <- raster("DTM_ams.tif")
+DSM_tmp <- raster("DSM_merged_ams.tif")
+GS_tmp <- raster("20200629_gm_Bomenkaart_v2_resampled_ams_trees.tif")
+
+# load as raster objects
+DEM <- rast(DEM_tmp)
+DSM <- rast(DSM_tmp)
+GreenSpace <- rast(GS_tmp)
+
+# assign correct crs for the Netherlands
+terra::crs(DSM) <- "EPSG:28992"
+terra::crs(DEM) <- "EPSG:28992"
+terra::crs(GreenSpace) <- "EPSG:28992"
+```
+
+```{r}
+# visualise dsm for a check 
+pal <- colorRampPalette(c("blue", "white", "red"))
+
+levelplot(DSM, par.settings = list(axis.line = list(col = NA)),
+          main = "DSM Map", at = seq(0, max(values(DSM)), length.out = 100),
+          col.regions = pal(100), colorkey = FALSE)
+```
+
+# Viewshed single point
+
+```{r}
+# Generate single observer point
+observer <- st_sf(sf_point(c(115000, 486000)), crs = st_crs(28992))
+
+vs <- viewshed(observer = observer, dsm_rast = DSM, dtm_rast = DEM,
+               max_distance = 200, observer_height = 1.7, plot = TRUE)
+
+```
+
+```{r}
+
+# load street data 
+streets_sf <- st_read("C:/Users/Ondrej/2.5D-GreenViewIndex-Netherlands/streets.gpkg")
+streets_sf <- st_transform(streets_sf, crs = 28992)
+
+# extract XY-coordinates of street vertices
+xy_coords <- st_coordinates(streets_sf) %>% as_tibble()
+
+# rename columns to 'x' and 'y'
+colnames(xy_coords) <- c("x", "y")
+
+# conver tibble to an sf object
+ams_5m_sf <- st_as_sf(xy_coords, coords = c("x", "y"), crs = 28992)
+names(ams_5m_sf)[1] <- "id"
+
+head(ams_5m_sf,3)
+
+```
+
+# VGVI for streets in AMS
+
+```{r}
+# Compute the VGVI along the line feature. Since the resolution is 5 meters, points along the line feature will be generated every 5 meters.
+
+# Set cores 
+cores <- 22
+ams_vgvi <- vgvi_from_sf(observer = ams_5m_sf,
+                               dsm_rast = DSM, 
+                               dtm_rast = DEM, 
+                               greenspace_rast = GreenSpace,
+                               max_distance = 550, observer_height = 1.7,
+                               raster_res = 5,
+                               m = 1, b = 3, mode = "exponential",
+                               cores = cores, 
+                               progress = TRUE)
+```
+```{r}
+summary(ams_vgvi)
+```
+
+
+```{r}
+# Visualise counts of vgvi values 
+
+# Convert the output to an sf object
+ams_vgvi_sf <- st_as_sf(ams_vgvi, coords = c("X", "Y"))
+
+ggplot(data = ams_vgvi_sf, aes(x = VGVI)) +
+  geom_histogram(binwidth = 0.05, fill = "blue", color = "black") +
+  scale_x_continuous(limits = c(0, 0.7), expand = c(0, 0.02)) +
+  labs(x = "VGVI", y = "Count", title = "Histogram of VGVI values")
+```
+
+
+```{r}
+# convert the output to sf
+ams_vgvi_sf <- st_as_sf(ams_vgvi, coords = c("x", "y"))
+
+# visualise the gvi 
+ggplot(ams_vgvi_sf, aes(x = st_coordinates(geometry)[,1], y = st_coordinates(geometry)[,2], color = VGVI)) + 
+  geom_point() +
+  scale_color_gradient(low = "white", high = "darkgreen") +
+  labs(x = "X Coordinate", y = "Y Coordinate", color = "VGVI")
+```
+
+
+
+# VGVI for buildings in AMS
+
+```{r}
+buildings_sf <- st_read("C:/Users/Ondrej/2.5D-GreenViewIndex-Netherlands/buildings.gpkg")
+buildings_sf <- st_transform(buildings_sf, crs = 28992)
+
+# extract XY-coordinates of each building geometry
+xy_coords <- lapply(buildings_sf$geom, st_coordinates) %>%
+  lapply(as_tibble) %>%
+  bind_rows() %>%
+  setNames(c("X", "Y")) %>%
+  select(X, Y)
+
+colnames(xy_coords) <- c("x", "y")
+
+ams_5m_sf_buil <- st_as_sf(xy_coords, coords = c("x", "y"), crs = 28992)
+
+ams_5m_sf_buil
+```
+
+```{r}
+# Compute the VGVI along the line feature. Since the resolution is 5 meters, points along the line feature will be generated every 5 meters.
+
+# Set cores 
+cores <- 22
+ams_vgvi <- vgvi_from_sf(observer = ams_5m_sf_buil,
+                               dsm_rast = DSM, 
+                               dtm_rast = DEM, 
+                               greenspace_rast = GreenSpace,
+                               max_distance = 550, observer_height = 1.7,
+                               raster_res = 5,
+                               m = 1, b = 3, mode = "exponential",
+                               cores = cores, 
+                               progress = TRUE)
+
+```
+
+
+```{r}
+# convert the output to sf
+ams_vgvi_sf <- st_as_sf(ams_vgvi, coords = c("x", "y"))
+
+# visualise the gvi 
+ggplot(ams_vgvi_sf, aes(x = st_coordinates(geometry)[,1], y = st_coordinates(geometry)[,2], color = VGVI)) + 
+  geom_point() +
+  scale_color_gradient(low = "white", high = "dark green") +
+  labs(x = "X Coordinate", y = "Y Coordinate", color = "VGVI")
+```
+
+
+# VGVI and Income per neighbourhood (buurt) in AMS
+
+```{r}
+# income data from CBS
+gdf_income <- read.csv("income_data/83765NED_UntypedDataSet_14052023_211018.csv", sep = ";")
+
+head(gdf_income, 3)
+
+# buurt names to join onto income data
+gdf_buurt <- st_read("income_data/WijkBuurtkaart_2018_v3/buurt_2018_v3.shp")
+gdf_buurt <- gdf_buurt[gdf_buurt$GM_NAAM == "Amsterdam", ]
+gdf_buurt <- gdf_buurt[, c("BU_CODE", "BU_NAAM", "WK_CODE", "GM_CODE", "GM_NAAM", "geometry")]
+
+head(gdf_buurt, 3)
+```
+
+
+```{r}
+# join data on buurt codes 
+joined_data <- inner_join(gdf_income, gdf_buurt, by = c("WijkenEnBuurten" = "BU_CODE"))
+
+head(joined_data, 3)
+```
+
+
+```{r}
+# convert the joined data to sf
+joined_sf <- st_as_sf(joined_data)
+
+# calculate average gvi per buurt
+joined_vgvi <- st_join(joined_sf, ams_vgvi_sf, join = st_intersects)
+
+# calculate the mean VGVI for unique BU_NAAMs
+vgvi_by_bu <- joined_vgvi %>%
+  group_by(BU_NAAM) %>%
+  summarize(VGVI = mean(VGVI, na.rm = TRUE))
+
+vgvi_by_bu
+
+```
+
+joined_sf
+
+
+```{r}
+# choropleth map visualisng the results
+map <- ggplot() +
+  geom_sf(data = vgvi_by_bu, aes(fill = VGVI), color = "grey") +
+  scale_fill_gradient(low = "white", high = "dark green") +
+  theme_void()
+
+map
+```
+
+
+```{r}
+# visualise average income per buurt in AMS
+
+# convert income column to a numeric type
+joined_data$GemiddeldInkomenPerInkomensontvanger_65 <- as.numeric(joined_data$GemiddeldInkomenPerInkomensontvanger_65)
+
+# convert the joined data to sf
+joined_sf <- st_as_sf(joined_data)
+
+map <- ggplot() +
+  geom_sf(data = joined_sf, aes(fill = GemiddeldInkomenPerInkomensontvanger_65), color = "grey") +
+  scale_fill_gradient(low = "white", high = "red") +
+  theme_void()
+
+map
+```
+
+
