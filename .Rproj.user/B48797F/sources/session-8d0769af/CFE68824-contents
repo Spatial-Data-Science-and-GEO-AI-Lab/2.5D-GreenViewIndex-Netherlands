@@ -1,0 +1,352 @@
+---
+title: "Viewshed-R-ned"
+output: html_document
+date: "2023-05-13"
+---
+
+```{r}
+# install packages
+remotes::install_git("https://github.com/STBrinkmann/GVI")
+install.packages("terra", repos = "http://cran.us.r-project.org")
+install.packages("rasterVis", repos = "http://cran.us.r-project.org")
+install.packages("leaflet")
+```
+
+```{r}
+# load libraries
+
+library(leaflet)
+library(leaflet.extras)
+
+library(terra)
+library(sf)
+library(sfheaders)
+library(GVI)
+library(raster)
+library(tidyverse)
+library(rasterVis)
+library(ggplot2)
+library(dplyr)
+library(raster)
+library(leaflet)
+library(leaflet.extras)
+
+suppressPackageStartupMessages(library(terra))
+suppressPackageStartupMessages(library(sf))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(rasterVis))
+```
+
+
+# Coordinates for the Netherlands in Dutch CRS
+```{r}
+library(sp)
+
+# Define the input coordinates
+min_latitude <- 50.7504
+max_latitude <- 53.7253
+min_longitude <- 3.3588
+max_longitude <- 7.2275
+
+# matrix of coordinates
+coords <- matrix(c(min_longitude, max_longitude, min_latitude, max_latitude), ncol = 2)
+points <- SpatialPoints(coords, proj4string = CRS("+init=epsg:4326")) #spatial points
+points_transf <- spTransform(points, CRS("+init=epsg:28992"))
+
+# transformed coordinates
+min_x <- points_transf@bbox[1, 1]
+max_x <- points_transf@bbox[1, 2]
+min_y <- points_transf@bbox[2, 1]
+max_y <- points_transf@bbox[2, 2]
+
+# Print the transformed coordinates
+print(paste("min_x:", min_x))
+print(paste("max_x:", max_x))
+print(paste("min_y:", min_y))
+print(paste("max_y:", max_y))
+```
+
+# Split the netherlands into tiles
+
+```{r}
+
+min_x <- 11852.3000565225
+max_x <- 276473.901609599
+min_y <- 308697.286021537
+max_y <- 639284.464773071
+
+split_netherlands <- function(min_x, max_x, min_y, max_y) {
+  # splits Netherlands into 10 tiles
+
+  # calculate the x and y for each tile
+  x_range <- (max_x - min_x) / 5
+  y_range <- (max_y - min_y) / 2
+  
+  tiles <- list()
+  for (i in 0:1) {
+    for (j in 0:4) {
+      tile <- list(
+        min_x = min_x + (j * x_range),
+        max_x = min_x + ((j + 1) * x_range),
+        min_y = min_y + (i * y_range),
+        max_y = min_y + ((i + 1) * y_range)
+      )
+      tiles <- c(tiles, list(tile))
+    }
+  }
+  
+  return(tiles)
+}
+
+tiles <- split_netherlands(min_x, max_x, min_y, max_y)
+tiles[1]
+
+```
+
+# Pre-process - store tiles to reduce the memory issues 
+
+```{r}
+
+# DTM_tmp <- raster("C:/Users/Ondrej/2.5D-GreenViewIndex-Netherlands/Data collection/tiles_dtm/DTM/DTM_merged.tif")
+# DSM_tmp <- raster("C:/Users/Ondrej/2.5D-GreenViewIndex-Netherlands/Data collection/tiles_dtm/DSM/DSM_merged.tif")
+# GS_tmp <- raster("Data collection/20200629_gm_Bomenkaart_v2_resampled_trees.tif")
+# 
+# # load as raster objects
+# DEM <- rast(DEM_tmp)
+# DSM <- rast(DSM_tmp)
+# GreenSpace <- rast(GS_tmp)
+# 
+# split_and_crop_raster <- function(raster, tiles, output_folder) {
+#   # create the folder if it does not exist
+#   if (!dir.exists(output_folder)) {
+#     dir.create(output_folder)
+#   }
+#   
+#   cropped_tiles <- list()
+#   
+#   for (i in 1:length(tiles)) {
+#     tile <- tiles[[i]]
+#     extent <- extent(tile$min_x, tile$max_x, tile$min_y, tile$max_y)
+#     cropped_raster <- crop(raster, extent)
+#     cropped_tiles[[i]] <- cropped_raster
+#     
+#     # save the cropped to an output folder
+#     output_file <- paste0(output_folder, "/cropped_tile_", i, ".tif")
+#     writeRaster(cropped_raster, filename = output_file, overwrite = TRUE)
+#   }
+#   
+#   return(cropped_tiles)
+# }
+# 
+# min_x <- 11852.3000565225
+# max_x <- 276473.901609599
+# min_y <- 308697.286021537
+# max_y <- 639284.464773071
+# 
+# # Split the raster into tiles
+# tiles <- split_netherlands(min_x, max_x, min_y, max_y)
+# 
+# # Create a list to store the cropped tiles
+# cropped_DTM <- split_and_crop_raster(DEM, tiles, 'C:/Users/Ondrej/Archive/2.5D-GreenViewIndex-Netherlands/Data/DTM_cropped')
+# cropped_DSM <- split_and_crop_raster(DSM, tiles, 'C:/Users/Ondrej/Archive/2.5D-GreenViewIndex-Netherlands/Data/DSM_cropped')
+# cropped_green <- split_and_crop_raster(GreenSpace, tiles, 'C:/Users/Ondrej/Archive/2.5D-GreenViewIndex-Netherlands/Data/Greeness')
+
+```
+
+
+# Street data pre-processing
+
+```{r}
+
+sampled_points <- st_read("C:/Users/Ondrej/2.5D-GreenViewIndex-Netherlands/Data collection/street_data/sampled_points_ned.gpkg")
+
+xy_coords <- st_coordinates(sampled_points) %>% as_tibble() # Extract XY-coordinates of street vertices
+colnames(xy_coords) <- c("x", "y") # rename columns to 'x' and 'y'
+ned_5m_sf <- st_as_sf(xy_coords, coords = c("x", "y"), crs = 28992) # Convert tibble to an sf object
+
+
+# tiles <- split_netherlands()
+# 
+# # list to store the cropped points data
+# cropped_points_data <- list()
+# 
+# # Loop through each tile and crop the points data
+# for (i in 1:length(tiles)) {
+#   tile <- tiles[[i]]
+#   tile$min_x
+#   extent <- st_bbox(c(xmin = tile$min_x, ymin = tile$min_y, xmax = tile$max_x, ymax = tile$max_y))
+#   cropped_data <- st_crop(ned_5m_sf, extent)
+# 
+#   # Add cropped coord to a list
+#   cropped_points_data[[i]] <- cropped_data
+# }
+
+```
+
+
+# VGVI entire Netherlands
+
+```{r}
+# Set cores 
+cores <- 10
+
+# directories of tiles 
+dsm_cropped_directory <- "C:/Users/Ondrej/Archive/2.5D-GreenViewIndex-Netherlands/Data/DSM_cropped"
+dtm_cropped_directory <- "C:/Users/Ondrej/Archive/2.5D-GreenViewIndex-Netherlands/Data/DTM_cropped"
+grn_cropped_directory <- "C:/Users/Ondrej/Archive/2.5D-GreenViewIndex-Netherlands/Data/Greeness"
+
+# list of files in the directory
+cropped_files_dsm <- list.files(dsm_cropped_directory, pattern = "^cropped_tile_\\d+\\.tif$", full.names = TRUE)
+cropped_files_dtm <- list.files(dtm_cropped_directory, pattern = "^cropped_tile_\\d+\\.tif$", full.names = TRUE)
+cropped_files_grn <- list.files(grn_cropped_directory, pattern = "^cropped_tile_\\d+\\.tif$", full.names = TRUE)
+
+# empty list to store gvi data after iterations
+gvi_results <- list()
+
+# loop through each cropped raster file
+for (i in 1:length(cropped_files_dsm)) {
+# for (i in 1:2) {
+  cropped_dsm <- rast(cropped_files_dsm[i])
+  cropped_dtm <- rast(cropped_files_dtm[i])
+  cropped_grn <- rast(cropped_files_grn[i])
+  
+  # set the CRS to the Dutch CRS (EPSG:28992)
+  raster::crs(cropped_dsm) <- "EPSG:28992"
+  raster::crs(cropped_dtm) <- "EPSG:28992"
+  raster::crs(cropped_grn) <- "EPSG:28992"
+  
+
+  # street_points <- cropped_points_data[[i]]$geometry
+  # street_sf <- st_as_sf(street_points, coords = c("x", "y"), crs = 28992)
+  
+  # compute VGVI using the cropped rasters
+  vgvi_result <- vgvi_from_sf(observer = ned_5m_sf,
+                             dsm_rast = cropped_dsm,
+                             dtm_rast = cropped_dtm,
+                             greenspace_rast = cropped_grn,
+                             max_distance = 300, observer_height = 1.7,
+                             raster_res = 5,
+                             m = 1, b = 3, mode = "exponential",
+                             cores = cores,
+                             progress = TRUE)
+  
+  # store the VGVI result in the list
+  gvi_results[[i]] <- vgvi_result
+  
+}
+
+# combine the results from all tiles
+cities_vgvi <- do.call(rbind, gvi_results)
+cities_vgvi
+```
+
+
+
+```{r}
+# Visualise counts of vgvi values 
+
+# Convert the output to an sf object
+cities_vgvi <- st_as_sf(cities_vgvi, coords = c("X", "Y"))
+
+ggplot(data = cities_vgvi, aes(x = VGVI)) +
+  geom_histogram(binwidth = 0.05, fill = "blue", color = "black") +
+  scale_x_continuous(limits = c(0, 0.8), expand = c(0, 0.02)) +
+  labs(x = "VGVI", y = "Count", title = "Histogram of VGVI values")
+```
+
+
+```{r}
+# convert the output to sf
+cities_vgvi_sf <- st_as_sf(cities_vgvi, coords = c("x", "y"))
+
+# visualise the gvi 
+ggplot(cities_vgvi_sf, aes(x = st_coordinates(geometry)[,1], y = st_coordinates(geometry)[,2], color = VGVI)) + 
+  geom_point() +
+  scale_color_gradient(low = "white", high = "darkgreen") +
+  labs(x = "X Coordinate", y = "Y Coordinate", color = "VGVI")
+```
+
+
+# VGVI, income per neighbourhood
+
+```{r}
+# income data from CBS
+gdf_income <- read.csv("Data collection/income_data/83765NED_UntypedDataSet_14052023_211018.csv", sep = ";")
+
+head(gdf_income, 3)
+
+# buurt names to join onto income data
+gdf_buurt <- st_read("Data collection/income_data/WijkBuurtkaart_2018_v3/buurt_2018_v3.shp")
+# gdf_buurt <- gdf_buurt[gdf_buurt$GM_NAAM == "Amsterdam", ]
+
+cities <- c("Amsterdam", "Utrecht", "Rotterdam", "'s-Gravenhage")
+gdf_buurt <- gdf_buurt[gdf_buurt$GM_NAAM %in% cities, ]
+
+gdf_buurt <- gdf_buurt[, c("BU_CODE", "BU_NAAM", "WK_CODE", "GM_CODE", "GM_NAAM", "geometry")]
+
+head(gdf_buurt, 3)
+```
+
+```{r}
+# join data on buurt codes 
+joined_data <- inner_join(gdf_income, gdf_buurt, by = c("WijkenEnBuurten" = "BU_CODE"))
+
+head(joined_data, 3)
+```
+
+
+```{r}
+# convert the joined data to sf
+joined_sf <- st_as_sf(joined_data)
+
+# calculate average gvi per buurt
+joined_vgvi <- st_join(joined_sf, cities_vgvi_sf, join = st_intersects)
+
+# calculate the mean VGVI for unique BU_NAAMs
+vgvi_by_bu <- joined_vgvi %>%
+  group_by(BU_NAAM) %>%
+  summarize(VGVI = mean(VGVI, na.rm = TRUE))
+
+vgvi_by_bu
+
+```
+
+
+```{r}
+# choropleth map visualisng the results
+map <- ggplot() +
+  geom_sf(data = vgvi_by_bu, aes(fill = VGVI), color = "grey") +
+  scale_fill_gradient(low = "white", high = "dark green") +
+  theme_void()
+
+map
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
