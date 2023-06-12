@@ -22,6 +22,60 @@ import rasterio
 from rasterio.merge import merge as merge_tiffs
 
 
+def resample_raster(input_file, output_file, scale_factor):
+    """downsamples a tif images based on a specified scale
+    factor
+
+    :param input_file: tif file
+    :param output_file: tif file name
+    :param scale_factor: scale to which it should be downsampled
+    """
+    with rasterio.open(input_file) as src:
+        data = src.read(
+            out_shape=(
+                src.count,
+                int(src.height * src.res[0] / scale_factor),
+                int(src.width * src.res[1] / scale_factor)
+            ),
+            resampling=Resampling.bilinear
+        )
+
+        transform = src.transform * src.transform.scale(
+            (src.width / data.shape[-1]),
+            (src.height / data.shape[-2])
+        )
+        profile = src.profile
+        profile.update(transform=transform, width=data.shape[-1], height=data.shape[-2])
+
+        with rasterio.open(output_file, "w", **profile) as dst:
+            dst.write(data)
+
+
+
+def create_binary_tree_map(input_file, output_file, threshold):
+    """creates a binary three map (tree T/F) depending on
+    the specified threshold of proability (0-100)
+
+    :param input_file: tif file of tree probability of occurance
+    :param output_file: tif file of binary tree occurance
+    :param threshold: probability of occurance
+    """
+    with rasterio.open(input_file) as src:
+        data = src.read(1)
+
+        # Create a new array with values above the threshold
+        new_data = data.copy()
+        new_data[new_data <= threshold] = 0
+        new_data[new_data > threshold] = 1
+
+        # Use metadata from the input
+        meta = src.meta
+
+    with rasterio.open(output_file, 'w', **meta) as dst:
+        dst.write(new_data, 1)
+
+
+
 def process_linestrings(streets_geom: GeoDataFrame, interval: int):
     """Preprocesses street linestring data
         into point street data
