@@ -55,7 +55,12 @@ tree datasets. Since the tree dataset has a resolution of 10x10, while the DSM a
 resolution of 5x5, we downsampled the tree dataset to match the granularity of the DSM 
 and DTM files.
 
-**Step 3 - tree visibility computation:** this step is done in R for computational 
+**Step 3 - data quality check (optional):** this step follows a function that assesses the presence 
+of missing data in the DSM and DTM files, as these files are often subject to missing data. 
+A buffer of a specified length (specify according to the defined radius in the viewshed) is generated 
+as a mask surrounding the streets. Consequently, only  the cells relevant to the VGVI calculation are evaluated.
+
+**Step 4 - tree visibility computation:** this step is done in R for computational 
 efficiency reasons. Folders with preprocessed DSM, DTM, tree data and street points
 are inputted into a function, where VGVI score is calculated for each tile. 
 Note that the street data input is included in its entirety as it has a relatively 
@@ -64,12 +69,17 @@ may contain only NaNs (e.g., a result of being in the ocean), hence the function
 for such a scenario prior to the computation. This check is necessary as the original VGVI
 function does not account for this particular condition.
 
-**Step 4 - VGVI validation:** the reults of the step 3 are validated by performing a 
+**Step 5 - VGVI validation:** the reults of the step 3 are validated by performing a 
 coorelation between VGVI and Normalized Difference Vegetation Index (NDVI). 
 
-**Step 5 - neighbourhood-level aggregation:** the resulting tree visibility is spatially merged
+**Step 6 - neighbourhood-level aggregation:** the resulting tree visibility is spatially merged
 with two geodataframes obtained from cbs. One contains geometries and data for "buurt" 
 (the smallest district) and the other one for "wijk" (a neighborhood composed of multiple buurts). 
 
-**Step 6 - Modeling socio-economic variables and tree visibility:**
-- **Step 3.1**: 
+**Step 7 - Modeling socio-economic variables and tree visibility:**
+Modeling is done at the buurt level, with three sets of models: spatial 
+autocorrelation models (Moran's Statistic, LISA, GI*), GINI index and GWR/MGWR. 
+For the MGWR modeling a special _fastgwr_ package needs to be used to handle the 
+data volume. 
+
+# Results
