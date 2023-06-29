@@ -1,18 +1,7 @@
-## Progress
-
-| Week | Progress                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| ---- |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Week 1 | - read relevant literature <br> - two relevant papers, among others: <br> 1) Modelling and mapping eye-level greenness visibility exposure using multi-source data at high spatial resolutions by S.M. Labib, Jonny J. Huck, Sarah Lindley <br> 2) Viewshed-based modelling of visual exposure to urban greenery – An efficient GIS tool for practical planning applications by Zofie Cimburova, Stefan Blumentrath                                                                                                                                            |
-| Week 2 | - familiarized myself with the calculation of viewshed analysis, decay model, GVI, among others <br> - coded viewshed using python for Utrecht area <br> - duplicated the code using R                                                                                                                                                                                                                                                                                                                                                                         |
-| Week 3 | - switched to a sample of Amsterdam area due to missing data around Utrecht <br> - created a mask of Amsterdam streets to exclude points outside of street network from the analysis <br> - used Labib's function to run the GVI on a small part of Amsterdam <br> - replicated the GVI in R <br> - created a mask for buildings instead of streets and replicate the analysis <br> - collected income data on buurts (neighbourhoods) for the entire Netherlands from CBS <br> - used parallelization to run the analysis for the entire Amsterdam area  <br> 
-| Week 4 | - sampled  points 50m apart on linestrings street data from OSM <br>  - coded a pipeline to get new data from AHN3 on DSM and DTM (both 0.5m or 5m available) <br> - scaled up and calculated GVI for four cities Rotterdam, Hague, Utrecht and Amsterdam. <br> - Created tiles of streets of the Netherlands in order to be able to download data on the entire country <br>                                                                                                                                                                                  
-| Week 5 | - Downloaded street data on the entire Netherlands using osmextract<br> - Coded a function that splits raster files into tiles to avoid memory issues with GVI <br> - Also, coded a function to split the street data into tiles <br> - Stored the tile files locally, looped through them to calculate GVI, and finally attached the results to a gdf <br>                                                                                                                                                                                                    
-| Week 6 | - investigated the feasibility of improving the DSM and DTM files <br> - calculated a percentage of missing values on a sampled region from the streets (<5%) <br> percentage of missing values for the entire netherlands <br> in process - obtain GVI for the entire Netherlands                                                                                                                                                                                                                                                                             
-| Week 7 | - CY                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| Week 8 |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-
-
 # Analyzing Greenness Visibility in the Netherlands: A Viewshed-Based Approach and Socio-economic Modeling
+
+
+**THE GITHUB README IS CURRENTLY BEING UPDATED**
 
 The aim of this project is threefold: 
 1) compute the tree visibility using viewshed-based approach for the entire Netherlands in a reproducible manner; 
@@ -70,7 +59,7 @@ for such a scenario prior to the computation. This check is necessary as the ori
 function does not account for this particular condition.
 
 **Step 5 - VGVI validation:** the reults of the step 3 are validated by performing a 
-coorelation between VGVI and Normalized Difference Vegetation Index (NDVI). 
+Pearson's coorelation between VGVI and Normalized Difference Vegetation Index (NDVI). 
 
 **Step 6 - neighbourhood-level aggregation:** the resulting tree visibility is spatially merged
 with two geodataframes obtained from cbs. One contains geometries and data for "buurt" 
@@ -80,6 +69,26 @@ with two geodataframes obtained from cbs. One contains geometries and data for "
 Modeling is done at the buurt level, with three sets of models: spatial 
 autocorrelation models (Moran's Statistic, LISA, GI*), GINI index and GWR/MGWR. 
 For the MGWR modeling a special _fastgwr_ package needs to be used to handle the 
-data volume. 
+data volume(see dependencies). 
 
 # Results
+
+
+### VGVI result
+The below image represents the final calculation of the VGVI for 
+the entire Netherlands at three levels:
+![visualisation_vgvi_3maps_cropped.png](visualisation%2Fvisualisation_vgvi_3maps_cropped.png)
+
+### Spatial autocorrelation
+
+
+
+### Validation 
+
+
+
+### GINI index
+
+
+
+### MGWR 
