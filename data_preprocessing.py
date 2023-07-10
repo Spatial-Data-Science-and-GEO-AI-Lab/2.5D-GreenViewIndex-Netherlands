@@ -21,9 +21,37 @@ import tempfile
 import rasterio
 from rasterio.merge import merge as merge_tiffs
 
+class StreetsHandler(osmium.SimpleHandler):
+    """The class was adapted from https://www.kaggle.com/code/maxim75/osm-osmium/notebook.
+    It converts a pbf file into a Geodataframe"""
+    def __init__(self):
+        osmium.SimpleHandler.__init__(self)
+        self.num_nodes = 0
+        self.num_relations = 0
+        self.num_ways = 0
+        self.street_relations = []
+        self.street_relation_members = []
+        self.street_ways = []
+        # A global factory that creates WKB from a osmium geometry
+        self.wkbfab = osmium.geom.WKBFactory()
+
+    def way(self, w):
+        if w.tags.get("highway") is not None and w.tags.get("name") is not None:
+            try:
+                wkb = self.wkbfab.create_linestring(w)
+                geo = wkblib.loads(wkb, hex=True)
+            except:
+                return
+            row = { "w_id": w.id, "geo": geo }
+
+            for key, value in w.tags:
+                row[key] = value
+
+            self.street_ways.append(row)
+            self.num_ways += 1
 
 def resample_raster(input_file, output_file, scale_factor):
-    """downsamples a tif images based on a specified scale
+    """downsamples/upsample a tif images based on a specified scale
     factor
 
     :param input_file: tif file
@@ -109,141 +137,65 @@ def process_linestrings(streets_geom: GeoDataFrame, interval: int):
 
 
 
+def split_raster(min_x, max_x, min_y, max_y):
+    # splits raster into 10 tiles
 
-class StreetsHandler(osmium.SimpleHandler):
-    """The class was adapted from https://www.kaggle.com/code/maxim75/osm-osmium/notebook.
-    It converts a pbf file into a Geodataframe"""
-    def __init__(self):
-        osmium.SimpleHandler.__init__(self)
-        self.num_nodes = 0
-        self.num_relations = 0
-        self.num_ways = 0
-        self.street_relations = []
-        self.street_relation_members = []
-        self.street_ways = []
-        # A global factory that creates WKB from a osmium geometry
-        self.wkbfab = osmium.geom.WKBFactory()
+    # calculate the x and y range for each tile
+    x_range = (max_x - min_x) / 5
+    y_range = (max_y - min_y) / 2
 
-    def way(self, w):
-        if w.tags.get("highway") is not None and w.tags.get("name") is not None:
-            try:
-                wkb = self.wkbfab.create_linestring(w)
-                geo = wkblib.loads(wkb, hex=True)
-            except:
-                return
-            row = { "w_id": w.id, "geo": geo }
+    tiles = []
+    for i in range(2):
+        for j in range(5):
+            tile = {
+                "min_x": min_x + (j * x_range),
+                "max_x": min_x + ((j + 1) * x_range),
+                "min_y": min_y + (i * y_range),
+                "max_y": min_y + ((i + 1) * y_range)
+            }
+            tiles.append(tile)
 
-            for key, value in w.tags:
-                row[key] = value
+    return tiles
 
-            self.street_ways.append(row)
-            self.num_ways += 1
+import os
+from rasterio import features
+from rasterio.enums import Resampling
 
+def split_and_crop_raster(raster, tiles, output_folder):
+    # Create the folder if it does not exist
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
 
+    cropped_tiles = []
 
+    for i, tile in enumerate(tiles):
+        extent = [tile['min_x'], tile['min_y'], tile['max_x'], tile['max_y']]
+        out_transform, out_width, out_height = rasterio.warp.calculate_default_transform(raster.crs, raster.crs,
+                                                                                         raster.width, raster.height,
+                                                                                         *extent)
+        kwargs = raster.meta.copy()
+        kwargs.update({
+            'crs': raster.crs,
+            'transform': out_transform,
+            'width': out_width,
+            'height': out_height
+        })
+        cropped_raster = raster.read(window=rasterio.windows.from_bounds(*extent, transform=raster.transform))
+        output_file = os.path.join(output_folder, f'cropped_tile_{i+1}.tif')
+        with rasterio.open(output_file, 'w', **kwargs) as dst:
+            dst.write(cropped_raster)
 
-def download_tiles(input_file, working_dir):
-    """downloads DSM or DTM tiles based on urls that can be
-    found on https://www.pdok.nl/
-    :param input_file: directory to txt file with url links to tiles
-    :param working_dir: saving directory
-    :return:
-    """
-    with open(input_file, 'r') as f:
-        tile_urls = f.read().splitlines()
+        cropped_tiles.append(cropped_raster)
 
-    os.makedirs(working_dir, exist_ok=True) # create new directory if doesn't exist
-    total_tiles = len(tile_urls)
-    downloaded_tiles = 0
-
-    # loop through each url link
-    for url in tile_urls:
-        file_name = url.split('/')[-1]
-        output_path = os.path.join(working_dir, file_name)
-        response = requests.get(url)
-        with open(output_path, 'wb') as f:
-            f.write(response.content)
-        downloaded_tiles += 1
-        print(f"Progress: {downloaded_tiles}/{total_tiles}")
+    return cropped_tiles
 
 
 
+# Example usage
+min_x = 11852.3000565225
+max_x = 276473.901609599
+min_y = 308697.286021537
+max_y = 639284.464773071
 
-def extract_files(working_dir, output_dir):
-    """ unzips tiles into the output directory, while
-    deleting the zip files
-    :param working_dir: directory with zip files of tiles
-    :param output_dir: saving directory
-    :return:
-    """
-    os.makedirs(output_dir, exist_ok=True)
-
-    extracted_files = []
-
-    for file in os.listdir(working_dir):
-        if zipfile.is_zipfile(os.path.join(working_dir, file)):
-            with zipfile.ZipFile(os.path.join(working_dir, file)) as zf:
-                zf.extractall(output_dir)
-                print("Extracted files from:", file)
-                extracted_files.append(zf)
-
-    for zf in extracted_files:
-        zf.close()
-
-    print("Files extracted and saved to:", output_dir)
-
-
-
-
-def merge_tif_files(extracted_dir, output_dir, filename):
-    """
-    merges tif tiles into one large file
-    :param extracted_dir: tiles in tif format
-    :param output_dir: saving directory
-    :param filename: string name
-    :return:
-    """
-    os.makedirs(output_dir, exist_ok=True)
-
-    tif_files = []
-    for root, dirs, files in os.walk(extracted_dir):
-        tif_files += [os.path.join(root, file) for file in files if file.endswith('.TIF')]
-
-    src_files = [rasterio.open(tif_file) for tif_file in tif_files]
-    merged, out_trans = merge_tiffs(src_files)
-    output_file = os.path.join(output_dir, f'{filename}_merged.tif')
-    output_file = os.path.normpath(output_file)
-
-    meta = src_files[0].meta
-    meta.update({
-        "driver": "GTiff",
-        "height": merged.shape[1],
-        "width": merged.shape[2],
-        "transform": out_trans
-    })
-
-    with rasterio.open(output_file, "w", **meta) as dst:
-        dst.write(merged)
-
-    for src_file in src_files:
-        src_file.close()
-
-    print("Merged TIFF file saved to:", output_file)
-
-
-
-
-def process_files(input_file, output_dir, filename):
-    """ creates a pipeline for downlading, extracting and
-    merging tif files
-    :param input_file: directory to txt file with url links to tiles
-    :param output_dir: saving directory
-    :param filename: string name
-    :return:
-    """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        download_tiles(input_file, temp_dir)
-        extract_files(temp_dir, output_dir)
-        merge_tif_files(output_dir, output_dir, filename)
-
-
+netherlands_tiles = split_raster(min_x, max_x, min_y, max_y)
+print(netherlands_tiles)
