@@ -95,16 +95,23 @@ The below image shows significant clusters of LISA's local spatial autocorrelati
 where high–high (HH) represents hotspots, low-low (LL) represents coldspots, 
 and LH and HL represent spatial outliers:
 
-<img src="img/lisa_rslt.png" alt="lisa_rslt.png" width="300">
-
-
-### VGVI versus NDVI comparison 
+<p align="center">
+  <img src="img/lisa_rslt.png" alt="lisa_rslt.png" width="300">
+</p>
 
 
 ### GINI index
 The below image shows the weighted Gini index by population and its 
 results on the neighbourhood-level VGVI.
 
-<img src="img/gini_index_rslt.png" alt="gini_index_rslt.png" width="300">
+<p align="center">
+  <img src="img/gini_index_rslt.png" alt="gini_index_rslt.png" width="300">
+</p>
 
 ### MGWR 
+The below image shows the MGWR coefficients of the factors examined in the spatial context. The greyed-out area 
+represents a non-significant spatial extent of coefficients. 
+<p align="center">
+  <img src="img/mgwr_rslt.png" alt="mgwr_rslt.png">
+</p>
+
