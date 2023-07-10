@@ -1,9 +1,5 @@
-<<<<<<< HEAD
 # Mapping Greenness Visibility in the Netherlands: A Viewshed-Based Approach and Socio-economic Modeling
-=======
->>>>>>> c29e7123900bc20d6a55668a215a69b5fec2674d
 
-** GITHUB README IS CURRENTLY IN THE PROCESS OF BEING UPDATED**
 
 **THE GITHUB README IS CURRENTLY BEING UPDATED**
 
