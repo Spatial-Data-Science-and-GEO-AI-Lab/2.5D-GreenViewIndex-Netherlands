@@ -3,7 +3,16 @@
 
 **THE GITHUB README IS CURRENTLY BEING UPDATED**
 
-The aim of this project is threefold: 
+## Introduction
+The visibility of green spaces and features, particularly natural elements such as trees, 
+is known as 'greenness visibility' and is associated with numerous health benefits. However, 
+previous studies have largely focused on smaller scales, such as cities or regions, 
+when examining visibility metrics, partly due to their computational challenges. 
+In response, this study presents a methodological approach to compute tree visibility 
+at a national level in the Netherlands, while assessing its spatial pattern as well
+relation to selected socioeconomic factors.
+
+The aim of this study is threefold: 
 1) compute the tree visibility using viewshed-based approach for the entire Netherlands in a reproducible manner; 
 2) analyse tree visibility inequality using weighted GINI index; 
 3) model the relationship of tree visibility with selected socio-economic variables. 
@@ -13,21 +22,29 @@ The aim of this project is threefold:
 
 To successfully run this project, the following dependencies are required:
 
-- `geopandas`: A library for working with geospatial data.
-- `numpy`: A fundamental package for scientific computing with Python.
+- `geopandas`: A library for working with geo data.
+- `numpy`: A library for scientific computation.
 - `osmium`: A library for working with OpenStreetMap data.
 - `shapely`: A Python package for manipulation and analysis of geometric objects.
 - `rasterio`: A library for reading and writing raster data.
+- `contextily`: A library for adding basemaps to geo plots.
+- `missingno`: A library for visualizing missing data.
+- `cbsodata`: A library for extracting CBS Open Data.
+- `libpysal`: A library for spatial analysis and modeling.
+- `mgwr`: A library for geographically weighted regression.
+- `seaborn`: A library for statistical data visualization.
 
 ## Workflow
 The workflow of this project follows a sequence of steps as illustrated below. 
 
-![flowchart_methodology.jpg](img%2Fflowchart_methodology.jpg)
+<p align="center">
+  <img src="img/flowchart_methodology.jpg" alt="flowchart_methodology.jpg" width="400">
+</p>
 
-**Step 1 - data extraction:** the data is collected for digital surface model (DSM), 
-digital terrain model (DTM) from Actueel Hoogtebestand Nederland (AHN) in 1020 tiles
-for each model. Tree coverage data is obtained from Atlas living environment, street data using
-Python's library _pyrosm_ and socio-economic variables using _cbsodata_ library.
+**Step 1 - data extraction:** The data was collected for Digital Surface Model (DSM) and Digital Terrain Model (DTM) 
+from Actueel Hoogtebestand Nederland (AHN) in 1100 tiles for each model. Tree coverage data was obtained from 
+Atlas Living Environment, street data using Python's library 'pyrosm', and socio-economic variables using the 
+'cbsodata' library.
 
 
 **Step 2 - preprocess data:** 
@@ -35,18 +52,18 @@ a) both DTM and DSM data models are merged into one tif file,
 which is subsequently divided into larger tiles consisting of 10 individual tiles each. The division 
 is done by defining a spatial extent of the area (the Netherlands in this case). This step 
 is necessary for computational efficiency, while minimazing the need for cropping
-the street data (had the initial 1000 tiles were preserved). 
+the street data (had the initial 1000 tiles were preserved) (see below).
 
 ![tiles_preprocess.png](img%2Ftiles_preprocess.png)
 
-b) The street data is obtained in .pbf format, hence converted and preprocessed into .gpkg. 
+b) The street data is obtained in a '.pbf' format, hence it is converted and preprocessed into '.gpkg'. 
 The street geometries data are sampled at 50 metres intervals; if its linestring is shorter 
-than 50 meters, a point is taken at its centroid. 
+than 50 meters, a point is taken at its centroid (see below). 
 
 ![street_sampling.png](img%2Fstreet_sampling.png)
 
 c) The tree dataset is converted into a binary 
-based on cell threshold 10 to accurately represent the degree of detail of tree coverage.
+based on cell threshold 10 to accurately represent the degree of detail of tree coverage (see below).
 
 ![tree_preprocess.png](img%2Ftree_preprocess.png)
 
@@ -88,6 +105,7 @@ data volume(see dependencies).
 ### VGVI result
 The below image represents the final calculation of the VGVI for 
 the entire Netherlands at three levels:
+
 ![vgvi_three_levels_results.png](img%2Fvgvi_three_levels_results.png)
 
 ### Spatial autocorrelation
@@ -115,3 +133,8 @@ represents a non-significant spatial extent of coefficients.
   <img src="img/mgwr_rslt.png" alt="mgwr_rslt.png">
 </p>
 
+
+
+Creator: O. Mlynarcik (Ondrej), Masters student Applied Data Science, Faculty of Science, Utrecht University (ondrejmlynarc@gmail.com)
+
+Supervisor: S.M. Labib (Labib), Assistant Professor of Data Science and Health, Faculty of GeoSciences, Utrecht University (s.m.labib@uu.nl)
