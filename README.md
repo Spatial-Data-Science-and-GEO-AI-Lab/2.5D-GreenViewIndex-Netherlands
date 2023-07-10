@@ -88,20 +88,23 @@ data volume(see dependencies).
 ### VGVI result
 The below image represents the final calculation of the VGVI for 
 the entire Netherlands at three levels:
-![visualisation_vgvi_3maps_cropped.png](visualisation%2Fvisualisation_vgvi_3maps_cropped.png)
+![vgvi_three_levels_results.png](img%2Fvgvi_three_levels_results.png)
 
 ### Spatial autocorrelation
+The below image shows significant clusters of LISA's local spatial autocorrelations, 
+where high–high (HH) represents hotspots, low-low (LL) represents coldspots, 
+and LH and HL represent spatial outliers:
+
+<img src="img/lisa_rslt.png" alt="lisa_rslt.png" width="300">
 
 
-
-
-
-### Validation 
-
+### VGVI versus NDVI comparison 
 
 
 ### GINI index
+The below image shows the weighted Gini index by population and its 
+results on the neighbourhood-level VGVI.
 
-
+<img src="img/gini_index_rslt.png" alt="gini_index_rslt.png" width="300">
 
 ### MGWR 
