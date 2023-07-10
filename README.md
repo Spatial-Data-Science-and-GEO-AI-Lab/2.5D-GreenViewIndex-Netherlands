@@ -22,7 +22,7 @@ To successfully run this project, the following dependencies are required:
 ## Workflow
 The workflow of this project follows a sequence of steps as illustrated below. 
 
-![diagram.jpg](visualisation%2Fdiagram.jpg)
+![flowchart_methodology.jpg](img%2Fflowchart_methodology.jpg)
 
 **Step 1 - data extraction:** the data is collected for digital surface model (DSM), 
 digital terrain model (DTM) from Actueel Hoogtebestand Nederland (AHN) in 1020 tiles
@@ -37,18 +37,18 @@ is done by defining a spatial extent of the area (the Netherlands in this case).
 is necessary for computational efficiency, while minimazing the need for cropping
 the street data (had the initial 1000 tiles were preserved). 
 
-![tiles_vis_2.png](visualisation%2Ftiles_vis_2.png)
+![tiles_preprocess.png](img%2Ftiles_preprocess.png)
 
 b) The street data is obtained in .pbf format, hence converted and preprocessed into .gpkg. 
 The street geometries data are sampled at 50 metres intervals; if its linestring is shorter 
 than 50 meters, a point is taken at its centroid. 
 
-![street_sampling_2.png](visualisation%2Fstreet_sampling_2.png)
+![street_sampling.png](img%2Fstreet_sampling.png)
 
 c) The tree dataset is converted into a binary 
 based on cell threshold 10 to accurately represent the degree of detail of tree coverage.
 
-![tree_preprocess_2.png](visualisation%2Ftree_preprocess_2.png)
+![tree_preprocess.png](img%2Ftree_preprocess.png)
 
 d) An additional sub-step involves checking the resolution of the DSM, DTM, and 
 tree datasets. Since the tree dataset has a resolution of 10x10, while the DSM and DTM had a 
