@@ -1,4 +1,4 @@
-# Analyzing Greenness Visibility in the Netherlands: A Viewshed-Based Approach and Socio-economic Modeling
+# Mapping Greenness Visibility in the Netherlands: A Viewshed-Based Approach and Socio-economic Modeling
 
 
 **THE GITHUB README IS CURRENTLY BEING UPDATED**
@@ -22,24 +22,35 @@ To successfully run this project, the following dependencies are required:
 ## Workflow
 The workflow of this project follows a sequence of steps as illustrated below. 
 
-![img_7.png](img_7.png)
+![diagram.jpg](visualisation%2Fdiagram.jpg)
 
-**Step 1 - data collection:** the data is collected for digital surface model (DSM), 
+**Step 1 - data extraction:** the data is collected for digital surface model (DSM), 
 digital terrain model (DTM) from Actueel Hoogtebestand Nederland (AHN) in 1020 tiles
-for each model. Tree coverage data is obtained from Atlas living environemnt, street data using
+for each model. Tree coverage data is obtained from Atlas living environment, street data using
 Python's library _pyrosm_ and socio-economic variables using _cbsodata_ library.
 
-**Step 2 - preprocess data:** both DTM and DSM data models are merged into one tif file, 
+
+**Step 2 - preprocess data:** 
+a) both DTM and DSM data models are merged into one tif file, 
 which is subsequently divided into larger tiles consisting of 10 individual tiles each. The division 
 is done by defining a spatial extent of the area (the Netherlands in this case). This step 
 is necessary for computational efficiency, while minimazing the need for cropping
-the street data (had the initial 1000 tiles were preserved). The street data is obtained 
-in .pbf format, hence converted and preprocessed into .gpkg. The street geometries data are 
-sampled at 50 metres intervals; if its linestring is shorter than 50 meters, a point is taken 
-at its centroid. The tree dataset is converted into a binary based on cell threshold 10 to 
-to accurately represent the degree of detail of tree coverage. 
+the street data (had the initial 1000 tiles were preserved). 
 
-An additional sub-step involves checking the resolution of the DSM, DTM, and 
+![tiles_vis_2.png](visualisation%2Ftiles_vis_2.png)
+
+b) The street data is obtained in .pbf format, hence converted and preprocessed into .gpkg. 
+The street geometries data are sampled at 50 metres intervals; if its linestring is shorter 
+than 50 meters, a point is taken at its centroid. 
+
+![street_sampling_2.png](visualisation%2Fstreet_sampling_2.png)
+
+c) The tree dataset is converted into a binary 
+based on cell threshold 10 to accurately represent the degree of detail of tree coverage.
+
+![tree_preprocess_2.png](visualisation%2Ftree_preprocess_2.png)
+
+d) An additional sub-step involves checking the resolution of the DSM, DTM, and 
 tree datasets. Since the tree dataset has a resolution of 10x10, while the DSM and DTM had a 
 resolution of 5x5, we downsampled the tree dataset to match the granularity of the DSM 
 and DTM files.
@@ -80,6 +91,8 @@ the entire Netherlands at three levels:
 ![visualisation_vgvi_3maps_cropped.png](visualisation%2Fvisualisation_vgvi_3maps_cropped.png)
 
 ### Spatial autocorrelation
+
+
 
 
 
