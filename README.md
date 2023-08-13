@@ -1,8 +1,5 @@
 # Mapping Greenness Visibility in the Netherlands: A Viewshed-Based Approach and Socio-economic Modeling
 
-
-**THE GITHUB README IS CURRENTLY BEING UPDATED**
-
 ## Introduction
 The visibility of green spaces and features, particularly natural elements such as trees, 
 is known as 'greenness visibility' and is associated with numerous health benefits. However, 
